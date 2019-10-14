@@ -1,0 +1,216 @@
+---
+title: "p8105_hw3_qz2392"
+author: "Qimin Zhang"
+date: "10/6/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+```
+
+# Problem 1
+First to load the data from the p8105.datasets.
+```{r,collapse=TRUE, message=FALSE, warning=FALSE}
+library(p8105.datasets)
+data("instacart")
+
+instacart = 
+  instacart %>%
+  janitor::clean_names() %>%
+  distinct()
+```
+This dataset has `r nrow(instacart)` samples and `r ncol(instacart)` variables, and the key variables include 'order_number, 'order_dow', 'order_hour_of_day', 'days_since_prior_order',  'product_name', 'aisle' and 'department'. For example, an observation like the first row, contains an item shopped in an order with id =1, and id of the product is 49032, it was the first item to add in cart in this order, and it was reordered, shopped by a user with id 112108, and it was the 4th order of this user, on the 4th day of the week at the 10th hour of the day, and it had been 9 days since last order from this user, the product name is 'Bulgarian Yogurt', and it belongs to the aisle with id 120 and the department with id 16, and the aisle name is 'yogurt' and the deparment name is 'dairy eggs'.
+
+There are `r length(unique(pull(instacart, aisle)))` aisles here, and the most items ordered from `r tail(names(sort(table(pull(instacart, aisle)))), 1)`. It's reasonable because fresh vegetables are necessary supplies and there are many types of them.
+
+Next to make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered.
+```{r}
+instacart %>%
+  group_by(aisle) %>%
+  mutate(
+    aisle_count = length(aisle)
+  ) %>%
+  filter(aisle_count > 10000) %>%
+  ggplot(aes(x = aisle)) +
+    geom_bar() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(title = "Count of aisles")
+```
+The top 3 aisles are `r tail(names(sort(table(pull(instacart, aisle)))), 1)`, `r tail(names(sort(table(pull(instacart, aisle)))), 2)` and `r tail(names(sort(table(pull(instacart, aisle)))), 3)`.
+
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
+
+```{r}
+instacart %>%
+  filter(aisle %in% c("baking ingredients", 
+                    "dog food care", 
+                    "packaged vegetables fruits")) %>%
+  group_by(aisle, product_name) %>%
+  summarise(
+    product_count = length(product_name)
+  ) %>%
+  mutate(
+    product_rank_within_aisle = order(order(product_count, decreasing = TRUE))
+  ) %>%
+  filter(product_rank_within_aisle <=3) %>%
+  select(-product_rank_within_aisle) %>%
+  knitr::kable()
+```
+
+
+
+The top 3 items in the aisle 'baking ingredients' are 'Cane Sugar', 'Light Brown Sugar' and 'Pure Baking Soda'. The top 3 items in the aisle 'dog food care' are 'Organix Chicken & Brown Rice Recipe', 'Small Dog Biscuits' and 'Snack Sticks Chicken & Rice Recipe Dog Treats	'. The top 3 items in the aisle 'packaged vegetables fruits' are 'Organic Baby Spinach	', 'Organic Blueberries' and 'Organic Raspberries'. We can see that the organic food are very popular, and the Organix company is the leader of dog food care industry.
+
+
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week.
+```{r,warning=FALSE}
+instacart %>%
+  filter(
+    product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")
+  ) %>%
+  group_by(product_name, order_dow) %>%
+  summarise(
+    mean_hour_of_day = mean(order_hour_of_day)
+  ) %>%
+  pivot_wider(
+    names_from = order_dow,
+    values_from = mean_hour_of_day
+  ) %>%
+  knitr::kable()
+```
+
+People tended to order these items around noon, so maybe it's proper for the sellers to push notifications about these items around noon.
+
+# Problem 2
+Load and clean the data.
+```{r,collapse=TRUE, message=FALSE, warning=FALSE}
+data("BRFSS")
+brfss = 
+  brfss_smart2010 %>%
+  janitor::clean_names() %>%
+  distinct() %>%
+  filter(topic == "Overall Health") %>%
+  rename(
+    state = locationabbr,
+    county = locationdesc
+  ) %>%
+  mutate(
+    response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))
+  )
+```
+In 2002, which states were observed at 7 or more locations? What about in 2010?
+```{r}
+brfss %>%
+  filter(year == 2002) %>%
+  select(state, county) %>%
+  distinct() %>% 
+  group_by(state) %>%
+  summarise(
+    county_count = length(county)
+  ) %>%
+  filter(county_count >= 7) %>%
+  knitr::kable()
+
+brfss %>%
+  filter(year == 2010) %>%
+  select(state, county) %>%
+  distinct() %>% 
+  group_by(state) %>%
+  summarise(
+    county_count = length(county)
+  ) %>%
+  filter(county_count >= 7) %>%
+  knitr::kable()
+```
+
+So in 2002, Connecticut, Florida, Massachusetts, North Carolina, New Jersey, and Pennsylvania were observed at 7 or more locations. In 2010, California, Colorado, Florida, Florida, Massachusetts, Maryland, North Carolina, Nebraska, New Jersey, New York, Ohio, Pennsylvania, South Carolina, Texas and Washington were observed at 7 or more locations.
+
+Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the 'data_value' across locations within a state. Make a “spaghetti” plot of this average value over time within a state.
+```{r}
+excellent_data_value =  
+  brfss %>%
+  filter(response == "Excellent") %>%
+  select(year, state, data_value) %>%
+  group_by(year, state) %>%
+  mutate(
+    data_value_mean = mean(data_value, na.rm = TRUE)
+  )
+
+excellent_data_value %>%
+  ggplot(aes(x = year, y = data_value_mean, group = state, color = state)) +
+    geom_line()
+```
+The mean data values of these states from 2002 to 2010 are quite fluctuate between 10 to 30.
+
+Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
+```{r, message=FALSE, warning=FALSE}
+brfss %>%
+  filter(year %in% c(2006, 2010),
+         state == "NY") %>%
+  select(year, state, response, data_value) %>%
+  drop_na() %>% 
+  ggplot(aes(x = response, y = data_value)) +
+  geom_point() +
+  facet_grid(.~ year)
+```
+
+
+# Problem 3
+Load, tidy, and otherwise wrangle the data. The final dataset includes all originally observed variables and values; has useful variable names; includes a weekday vs weekend variable; and encode data with reasonable variable classes.
+```{r, message=FALSE, warning=FALSE}
+accel = 
+  read_csv("./accel_data.csv") %>%
+  janitor::clean_names() %>%
+  distinct() %>%
+  mutate(
+    weekday_or_weekend = case_when(
+      (day == "Monday") | (day == "Tuesday") | (day == "Wednesday") | 
+      (day == "Thursday") | (day == "Friday") ~ "weekday",
+      (day == "Saturday") | (day == "Sunday") ~ "weekend"
+    ),
+    week = as.integer(week),
+    day_id = as.integer(day_id)
+  ) %>%
+  select(week, day_id, day, weekday_or_weekend, everything())
+```
+The resulting dataset has `r nrow(accel)` observations, and contains variables including 'week' (which week was data recorded), 'day_id' (mutually different for all days), 'day' (which day of the week), 'weekday_or_weekend', and total 1440 activities on that day.
+
+Using the tidied dataset, aggregate accross minutes to create a total activity variable for each day. 
+```{r}
+accel = cbind(accel, 
+              activity_total = rowSums(accel[,c(5:1444)]))
+```
+Create a table showing these totals.
+```{r}
+accel %>%
+  group_by(day) %>%
+  summarise(
+    activity_sum_by_day = sum(activity_total)
+  ) %>%
+  knitr::kable()
+```
+
+The most active time was at Wednesday, Thursday and Friday.
+
+Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week.
+```{r}
+accel %>%
+  select(week, day, activity_1:activity_1440) %>%
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "activity_time",
+    values_to = "activity"
+  ) %>%
+  mutate(
+    activity_time = str_replace_all(activity_time, "activity_", "")
+    )%>%
+  ggplot(aes(x = activity_time, y = activity, color = day)) +
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Activity pattern through days")
+```
+
+The activities on Wednesday were relatively stable.
