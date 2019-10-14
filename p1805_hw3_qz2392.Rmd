@@ -39,6 +39,7 @@ instacart %>%
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     labs(title = "Count of aisles")
 ```
+
 The top 3 aisles are `r tail(names(sort(table(pull(instacart, aisle)))), 1)`, `r tail(names(sort(table(pull(instacart, aisle)))), 2)` and `r tail(names(sort(table(pull(instacart, aisle)))), 3)`.
 
 Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
@@ -157,6 +158,7 @@ brfss %>%
   facet_grid(.~ year)
 ```
 
+In 2006 and 2010, the data values are positively related to the response levels.
 
 # Problem 3
 Load, tidy, and otherwise wrangle the data. The final dataset includes all originally observed variables and values; has useful variable names; includes a weekday vs weekend variable; and encode data with reasonable variable classes.
