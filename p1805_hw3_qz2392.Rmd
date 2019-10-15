@@ -198,8 +198,9 @@ accel %>%
 The most active time was at Wednesday, Thursday and Friday.
 
 Make a single-panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week.
-```{r}
-accel %>%
+```{r message=FALSE, warning=FALSE}
+activity_pattern =  
+  accel %>%
   select(week, day, activity_1:activity_1440) %>%
   pivot_longer(
     activity_1:activity_1440,
@@ -212,6 +213,8 @@ accel %>%
   ggplot(aes(x = activity_time, y = activity, color = day)) +
   geom_point() +
   labs(title = "Activity pattern through days")
+activity_pattern
+ggsave("activity_pattern.jpg", activity_pattern)
 ```
 
 The activities on Wednesday were relatively stable.
