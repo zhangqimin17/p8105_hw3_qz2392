@@ -215,3 +215,5 @@ accel %>%
 ```
 
 The activities on Wednesday were relatively stable.
+
+
